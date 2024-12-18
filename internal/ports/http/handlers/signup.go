@@ -37,9 +37,9 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		fmt.Println("Ошибка регистрации:", err)
+		fmt.Fprintf(w, "Ошибка регистрации: %v", err)
 		return
 	}
-	fmt.Fprintf(w, "Received user: %+v", user)
 
 	token, err := services.GenerateJWT(user)
 	if err != nil {

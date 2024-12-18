@@ -1,8 +1,9 @@
 package models
 
 type User struct {
-	ID    int    `json:"id"`
-	Email string `json:"email"`
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
+	Verified bool   `json:"isVerified"`
 }
 
 type UserSignUp struct {
