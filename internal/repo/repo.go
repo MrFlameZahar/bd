@@ -2,7 +2,6 @@ package repo
 
 import (
 	"database/sql"
-	"fmt"
 
 	_ "github.com/lib/pq"
 	models "main.go/internal/models"
@@ -32,43 +31,34 @@ func FindUserByEmail(email string) (bool, error) {
 }
 
 // Изучи -> pgx5
-func CreateUser(userSignUp *models.UserSignUp) (*models.User, error) {
+func AddUserToDB(userSignUp *models.UserSignUp) error {
+	_, err := DB.Exec("INSERT INTO users (email, password) VALUES ($1, $2)", userSignUp.Email, userSignUp.Password)
 
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetUserFromDB(userSignUp *models.UserSignUp) (*models.User, error) {
 	user := models.NewUser()
 
-	_, err := DB.Exec("INSERT INTO users (email, password) VALUES ($1, $2)", userSignUp.Email, userSignUp.Password)
-	DB.QueryRow("SELECT email, id FROM users WHERE email = $1", userSignUp.Email).Scan(&user.Email, &user.ID)
+	err := DB.QueryRow("SELECT email, id FROM users WHERE email = $1", userSignUp.Email).Scan(&user.Email, &user.ID)
 
 	if err != nil {
 		return &models.User{}, err
 	}
+
 	return user, nil
-
 }
 
-func LoginUser(userSignUp *models.UserSignUp) (*models.User, error) {
-	exist, _ := FindUserByEmail(userSignUp.Email)
-	// Избавиться от условной логики здесь и унести её в ауф сервайс
-	if exist {
-		var password string
-		var email string
-		DB.QueryRow("SELECT email, password FROM users WHERE email = $1", userSignUp.Email).Scan(&email, &password)
-		if userSignUp.Email == email && userSignUp.Password == password {
-			user := models.NewUser()
-			DB.QueryRow("SELECT email, id FROM users WHERE email = $1", userSignUp.Email).Scan(&user.Email, &user.ID)
-			return user, nil
-		} else {
-			return &models.User{}, fmt.Errorf("неправильный логин или пароль")
-		}
-
-	} else {
-		return &models.User{}, fmt.Errorf("пользователь не существует")
+func GetUserAuthorisationFromDB(email string) (*models.UserSignUp, error) {
+	userSignUp := models.NewUserSignUp()
+	err := DB.QueryRow("SELECT email, password FROM users WHERE email = $1", email).Scan(&userSignUp.Email, &userSignUp.Password)
+	if err != nil {
+		return &models.UserSignUp{}, err
 	}
-}
-
-func UpdateUser(db *sql.DB) {
-
-	db.Query("UPDATE users SET name = 'new_name' WHERE id = 1")
+	return userSignUp, nil
 }
 
 // Перенести соединение в общее

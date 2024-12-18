@@ -15,13 +15,12 @@ func SignUp(userSignUp *models.UserSignUp) (*models.User, error) {
 	if exist {
 		return &models.User{}, fmt.Errorf("пользователь уже существует")
 	} else {
-
+		err = repo.AddUserToDB(userSignUp)
+		if err != nil {
+			return nil, err
+		}
 	}
-	// FindUserByEmail(userSignUp.Email)
-	// If пользователя нет, то создаем пользователя, отправляем запрос в repo на создание его в базе, если ошибок нет, то возвращаем пользователя
-	// Else возвращаем ошибку что пользователь уже есть и пустую модель юзера
-
-	user, err := repo.CreateUser(userSignUp)
+	user, err := repo.GetUserFromDB(userSignUp)
 
 	if err != nil {
 		return nil, err
@@ -32,13 +31,28 @@ func SignUp(userSignUp *models.UserSignUp) (*models.User, error) {
 }
 
 func LogIn(userSignUp *models.UserSignUp) (*models.User, error) {
-
-	user, err := repo.LoginUser(userSignUp)
+	exist, err := repo.FindUserByEmail(userSignUp.Email)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return user, nil
+	if exist {
+		loginUser, err := repo.GetUserAuthorisationFromDB(userSignUp.Email)
+		if err != nil {
+			return nil, err
+		}
+		if loginUser.Email == userSignUp.Email && loginUser.Password == userSignUp.Password {
+			user, err := repo.GetUserFromDB(userSignUp)
 
+			if err != nil {
+				return nil, err
+			}
+			return user, nil
+		} else {
+			return &models.User{}, fmt.Errorf("неправильный логин или пароль")
+		}
+	} else {
+		return &models.User{}, fmt.Errorf("пользователь не зарегестрирован")
+	}
 }
