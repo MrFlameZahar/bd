@@ -2,6 +2,7 @@ package repo
 
 import (
 	"database/sql"
+	"time"
 
 	_ "github.com/lib/pq"
 	models "main.go/internal/models"
@@ -61,4 +62,33 @@ func GetUserAuthorisationFromDB(email string) (*models.UserSignUp, error) {
 	return userSignUp, nil
 }
 
-// Перенести соединение в общее
+func AddUserToVerificationDB(user *models.User, verificationCode string) error {
+	_, err := DB.Exec("INSERT INTO is_verified, verification_code, id, email, code_expire_time VALUES ($1, $2, $3, $4, $5)", false, verificationCode, user.ID, user.Email, time.Now().Add(time.Hour))
+	return err
+}
+
+func GetUserVerification(user *models.User) (*models.UserVerification, error) {
+	var userVerification models.UserVerification
+
+	err := DB.QueryRow("SELECT is_verified, verification_code, id, email, code_expire_time FROM user_verification WHERE id = $1", user.ID).Scan(userVerification.IsVerified, userVerification.VerificationCode, userVerification.ID, userVerification.Email, userVerification.CodeExpireTime)
+
+	if err != nil {
+		return &userVerification, err
+	}
+
+	return &userVerification, nil
+}
+
+func ChangeVerificationState(userVerification *models.UserVerification, verificationState bool) error {
+	_, err := DB.Exec("UPDATE user_verification SET is_verified = $1 WHERE ID = $2", verificationState, userVerification.ID)
+
+	return err
+}
+
+func AddVerificationCode(userVerification *models.UserVerification, verificationCode string) error {
+	time := time.Now().Add(time.Hour)
+
+	_, err := DB.Exec("UPDATE user_verification SET verification_code = $1, code_expire_time = $2 WHERE ID = $3", verificationCode, time, userVerification.ID)
+
+	return err
+}

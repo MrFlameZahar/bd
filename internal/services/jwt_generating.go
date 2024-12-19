@@ -8,11 +8,10 @@ import (
 	models "main.go/internal/models"
 )
 
-func GenerateJWT(user *models.User) (string, error) {
+func GenerateJWT(user *models.User, verified bool) (string, error) {
 	// Создание claims (данных для токена)
 	email := user.Email
 	id := user.ID
-	verified := true
 	claims := jwt.MapClaims{
 		"sub":        id,
 		"email":      email,

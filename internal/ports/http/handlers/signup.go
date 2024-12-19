@@ -41,7 +41,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := services.GenerateJWT(user)
+	token, err := services.GenerateJWT(user, services.VerificationStatus(user))
 	if err != nil {
 
 		fmt.Println("Error generating token:", err)

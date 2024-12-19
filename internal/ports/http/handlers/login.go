@@ -41,7 +41,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Error login:", err)
 		return
 	}
-	token, err := services.GenerateJWT(user)
+	token, err := services.GenerateJWT(user, services.VerificationStatus(user))
 	if err != nil {
 
 		fmt.Println("Error generating token:", err)
