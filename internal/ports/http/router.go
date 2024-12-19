@@ -15,6 +15,7 @@ func NewRouter() http.Handler {
 	authMux := mux.NewRouter()
 	authMux.HandleFunc("/login", handlers.Login)
 	authMux.HandleFunc("/register", handlers.SignUp).Methods("POST")
+	authMux.HandleFunc("/verification", handlers.Verification)
 	authMux.Handle("/", services.AuthMiddleware(http.HandlerFunc(handlers.MainPage)))
 
 	return authMux

@@ -2,20 +2,28 @@ package repo
 
 import (
 	"database/sql"
-	"fmt"
-	"log"
+	"time"
 
 	_ "github.com/lib/pq"
 	models "main.go/internal/models"
 )
 
-func FindUserByEmail(email string, db *sql.DB) (bool, error) {
+var DB *sql.DB
+
+func ConnectDB() error {
+	connStr := "user=mrflame password=Zaxaro12 dbname=test host=127.0.0.1 port=5432 sslmode=disable"
+	var err error
+	DB, err = sql.Open("postgres", connStr)
+	return err
+}
+
+func FindUserByEmail(email string) (bool, error) {
 
 	var exists bool
 
 	query := `SELECT EXISTS (SELECT 1 FROM users WHERE email = $1)`
 
-	err := db.QueryRow(query, email).Scan(&exists)
+	err := DB.QueryRow(query, email).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -24,72 +32,63 @@ func FindUserByEmail(email string, db *sql.DB) (bool, error) {
 }
 
 // Изучи -> pgx5
-func CreateUser(userSignUp *models.UserSignUp) (*models.User, error) {
-
-	db, err := connectDB()
-
-	if err != nil {
-		log.Fatalf("Не удалось подключиться к базе данных: %v", err)
-	}
-
-	defer db.Close()
-
-	exist, _ := FindUserByEmail(userSignUp.Email, db)
-	if exist {
-		return &models.User{}, fmt.Errorf("пользователь уже существует")
-	} else {
-		user := models.NewUser()
-
-		_, err = db.Exec("INSERT INTO users (email, password) VALUES ($1, $2)", userSignUp.Email, userSignUp.Password)
-		db.QueryRow("SELECT email, id FROM users WHERE email = $1", userSignUp.Email).Scan(&user.Email, &user.ID)
-
-		if err != nil {
-			return &models.User{}, err
-		}
-		return user, nil
-	}
-
-}
-
-func LoginUser(userSignUp *models.UserSignUp) (*models.User, error) {
-	db, err := connectDB()
+func AddUserToDB(userSignUp *models.UserSignUp) error {
+	_, err := DB.Exec("INSERT INTO users (email, password) VALUES ($1, $2)", userSignUp.Email, userSignUp.Password)
 
 	if err != nil {
-		log.Fatalf("Не удалось подключиться к базе данных: %v", err)
+		return err
 	}
-
-	exist, _ := FindUserByEmail(userSignUp.Email, db)
-
-	if exist {
-		var password string
-		var email string
-		db.QueryRow("SELECT email, password FROM users WHERE email = $1", userSignUp.Email).Scan(&email, &password)
-		fmt.Println(email, password, userSignUp.Email, userSignUp.Password)
-		if userSignUp.Email == email {
-			if userSignUp.Password == password {
-				user := models.NewUser()
-				db.QueryRow("SELECT email, id FROM users WHERE email = $1", userSignUp.Email).Scan(&user.Email, &user.ID)
-				return user, nil
-			} else {
-				return &models.User{}, fmt.Errorf("неправильный пароль")
-			}
-		} else {
-			return &models.User{}, fmt.Errorf("неправильный логин")
-		}
-
-	} else {
-		return &models.User{}, fmt.Errorf("пользователь не существует")
-	}
+	return nil
 }
 
-func UpdateUser(db *sql.DB) {
+func GetUserFromDB(userSignUp *models.UserSignUp) (*models.User, error) {
+	user := models.NewUser()
 
-	db.Query("UPDATE users SET name = 'new_name' WHERE id = 1")
+	err := DB.QueryRow("SELECT email, id FROM users WHERE email = $1", userSignUp.Email).Scan(&user.Email, &user.ID)
+
+	if err != nil {
+		return &models.User{}, err
+	}
+
+	return user, nil
 }
 
-func connectDB() (*sql.DB, error) {
-	connStr := "user=mrflame password=Zaxaro12 dbname=test host=127.0.0.1 port=5432 sslmode=disable"
+func GetUserAuthorisationFromDB(email string) (*models.UserSignUp, error) {
+	userSignUp := models.NewUserSignUp()
+	err := DB.QueryRow("SELECT email, password FROM users WHERE email = $1", email).Scan(&userSignUp.Email, &userSignUp.Password)
+	if err != nil {
+		return &models.UserSignUp{}, err
+	}
+	return userSignUp, nil
+}
 
-	// Открываем соединение
-	return sql.Open("postgres", connStr)
+func AddUserToVerificationDB(user *models.User, verificationCode string) error {
+	_, err := DB.Exec("INSERT INTO is_verified, verification_code, id, email, code_expire_time VALUES ($1, $2, $3, $4, $5)", false, verificationCode, user.ID, user.Email, time.Now().Add(time.Hour))
+	return err
+}
+
+func GetUserVerification(user *models.User) (*models.UserVerification, error) {
+	var userVerification models.UserVerification
+
+	err := DB.QueryRow("SELECT is_verified, verification_code, id, email, code_expire_time FROM user_verification WHERE id = $1", user.ID).Scan(userVerification.IsVerified, userVerification.VerificationCode, userVerification.ID, userVerification.Email, userVerification.CodeExpireTime)
+
+	if err != nil {
+		return &userVerification, err
+	}
+
+	return &userVerification, nil
+}
+
+func ChangeVerificationState(userVerification *models.UserVerification, verificationState bool) error {
+	_, err := DB.Exec("UPDATE user_verification SET is_verified = $1 WHERE ID = $2", verificationState, userVerification.ID)
+
+	return err
+}
+
+func AddVerificationCode(userVerification *models.UserVerification, verificationCode string) error {
+	time := time.Now().Add(time.Hour)
+
+	_, err := DB.Exec("UPDATE user_verification SET verification_code = $1, code_expire_time = $2 WHERE ID = $3", verificationCode, time, userVerification.ID)
+
+	return err
 }

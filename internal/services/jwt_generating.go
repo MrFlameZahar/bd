@@ -8,23 +8,22 @@ import (
 	models "main.go/internal/models"
 )
 
-func GenerateJWT(user *models.User) (string, error) {
+func GenerateJWT(user *models.User, verified bool) (string, error) {
 	// Создание claims (данных для токена)
 	email := user.Email
 	id := user.ID
-
 	claims := jwt.MapClaims{
-		"sub":  id,                               // Subject (например, user ID)
-		"name": email,                            // Имя пользователя
-		"iat":  time.Now().Unix(),                // Время создания токена
-		"exp":  time.Now().Add(time.Hour).Unix(), // Время истечения токена
+		"sub":        id,
+		"email":      email,
+		"isVerified": verified,
+		"iat":        time.Now().Unix(),
+		"exp":        time.Now().Add(time.Hour).Unix(),
 	}
 
-	// Создание токена с данными и алгоритмом подписи
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	// Подпись токена секретным ключом
 	tokenString, err := token.SignedString(secretKey.SecretKey)
+
 	if err != nil {
 		return "", err
 	}
