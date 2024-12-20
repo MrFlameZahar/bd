@@ -63,14 +63,14 @@ func GetUserAuthorisationFromDB(email string) (*models.UserSignUp, error) {
 }
 
 func AddUserToVerificationDB(user *models.User, verificationCode string) error {
-	_, err := DB.Exec("INSERT INTO is_verified, verification_code, id, email, code_expire_time VALUES ($1, $2, $3, $4, $5)", false, verificationCode, user.ID, user.Email, time.Now().Add(time.Hour))
+	_, err := DB.Exec("INSERT INTO user_verification (is_verified, verification_code, id, email, code_expire_time) VALUES ($1, $2, $3, $4, $5)", false, verificationCode, user.ID, user.Email, time.Now().Add(time.Hour))
 	return err
 }
 
-func GetUserVerification(user *models.User) (*models.UserVerification, error) {
+func GetUserVerification(email string) (*models.UserVerification, error) {
 	var userVerification models.UserVerification
 
-	err := DB.QueryRow("SELECT is_verified, verification_code, id, email, code_expire_time FROM user_verification WHERE id = $1", user.ID).Scan(userVerification.IsVerified, userVerification.VerificationCode, userVerification.ID, userVerification.Email, userVerification.CodeExpireTime)
+	err := DB.QueryRow("SELECT is_verified, verification_code, id, email, code_expire_time FROM user_verification WHERE email = $1", email).Scan(&userVerification.IsVerified, &userVerification.VerificationCode, &userVerification.ID, &userVerification.Email, &userVerification.CodeExpireTime)
 
 	if err != nil {
 		return &userVerification, err

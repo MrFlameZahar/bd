@@ -19,6 +19,10 @@ type UserVerification struct {
 	Email            string
 	ID               int
 }
+type UserVerificationRequest struct {
+	VerificationCode string
+	Email            string
+}
 
 func NewUserSignUp() *UserSignUp {
 	return &UserSignUp{
