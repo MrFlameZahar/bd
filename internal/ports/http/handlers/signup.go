@@ -49,9 +49,10 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 
-	// Код ответа
+	services.SendVerificationLetter(user.Email, services.GenerateVerificationCode(user.Email))
+
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(models.RegisterResponse{JwtToken: token, VerificationCode: services.GenerateVerificationCode(user.Email)})
+	json.NewEncoder(w).Encode(token)
 }
 
 func MainPage(w http.ResponseWriter, r *http.Request) {

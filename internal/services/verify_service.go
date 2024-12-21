@@ -4,8 +4,11 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/go-gomail/gomail"
+	"main.go/internal"
 	models "main.go/internal/models"
 	repo "main.go/internal/repo"
 )
@@ -18,12 +21,12 @@ func VerificationStatus(email string) bool {
 
 func Verify(userVerification *models.UserVerification) error {
 	valid, err := checkValidVerification(userVerification)
-	if valid && err != nil {
+	if valid && err == nil {
 		if userVerification.VerificationCode == GenerateVerificationCode(userVerification.Email) {
 			repo.ChangeVerificationState(userVerification, true)
-			return err
+			return nil
 		} else {
-			return err
+			return fmt.Errorf("неправильный код верификации")
 		}
 	} else {
 		return err
@@ -48,4 +51,24 @@ func GenerateVerificationCode(email string) string {
 
 	// Преобразуем хеш в строку
 	return hex.EncodeToString(hashBytes)
+}
+
+func SendVerificationLetter(email string, verificationCode string) {
+	smtpHost := "smtp.yandex.ru"
+	smtpPort := 465
+
+	message := gomail.NewMessage()
+	message.SetHeader("From", internal.YandexMailLogin)
+	message.SetHeader("To", email)
+	message.SetHeader("Subject", "Верификация почты")
+	message.SetBody("text/plain", "Ваш код верификации: "+verificationCode)
+
+	dialer := gomail.NewDialer(smtpHost, smtpPort, internal.YandexMailLogin, internal.YandexMailPassword)
+	dialer.SSL = true
+
+	if err := dialer.DialAndSend(message); err != nil {
+		log.Fatalf("Не удалось отправить письмо: %v", err)
+	}
+
+	log.Println("Письмо успешно отправлено!")
 }

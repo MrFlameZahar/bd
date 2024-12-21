@@ -32,7 +32,6 @@ func Verification(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		userVerification, err := repo.GetUserVerification(userVerificationRequest.Email)
-
 		if err != nil {
 			fmt.Fprintf(w, "Ошибка верификации: %v", err)
 			return

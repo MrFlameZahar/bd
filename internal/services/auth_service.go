@@ -49,12 +49,16 @@ func LogIn(userSignUp *models.UserSignUp) (*models.User, error) {
 			return nil, err
 		}
 		if loginUser.Email == userSignUp.Email && loginUser.Password == userSignUp.Password {
-			user, err := repo.GetUserFromDB(userSignUp)
+			if VerificationStatus(userSignUp.Email) {
+				user, err := repo.GetUserFromDB(userSignUp)
 
-			if err != nil {
-				return nil, err
+				if err != nil {
+					return nil, err
+				}
+				return user, nil
+			} else {
+				return &models.User{}, fmt.Errorf("почта не верифицирована")
 			}
-			return user, nil
 		} else {
 			return &models.User{}, fmt.Errorf("неправильный логин или пароль")
 		}
