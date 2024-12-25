@@ -41,7 +41,7 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := services.GenerateJWT(user, services.VerificationStatus(user))
+	token, err := services.GenerateJWT(user, services.VerificationStatus(user.Email))
 	if err != nil {
 
 		fmt.Println("Error generating token:", err)
@@ -49,7 +49,8 @@ func SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 
-	// Код ответа
+	services.SendVerificationLetter(user.Email, services.GenerateVerificationCode(user.Email))
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(token)
 }
