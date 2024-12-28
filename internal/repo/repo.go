@@ -17,7 +17,13 @@ func ConnectDB() error {
 	return err
 }
 
-func FindUserByEmail(email string) (bool, error) {
+type userDataBase struct{}
+
+func NewUserDataBase() *userDataBase {
+	return &userDataBase{}
+}
+
+func (u *userDataBase) FindUserByEmail(email string) (bool, error) {
 
 	var exists bool
 
@@ -32,7 +38,7 @@ func FindUserByEmail(email string) (bool, error) {
 }
 
 // Изучи -> pgx5
-func AddUserToDB(userSignUp *models.UserSignUp) error {
+func (u *userDataBase) AddUserToDB(userSignUp *models.UserSignUp) error {
 	_, err := DB.Exec("INSERT INTO users (email, password) VALUES ($1, $2)", userSignUp.Email, userSignUp.Password)
 
 	if err != nil {
@@ -41,7 +47,7 @@ func AddUserToDB(userSignUp *models.UserSignUp) error {
 	return nil
 }
 
-func GetUserFromDB(userSignUp *models.UserSignUp) (*models.User, error) {
+func (u *userDataBase) GetUserFromDB(userSignUp *models.UserSignUp) (*models.User, error) {
 	user := models.NewUser()
 
 	err := DB.QueryRow("SELECT email, id FROM users WHERE email = $1", userSignUp.Email).Scan(&user.Email, &user.ID)
@@ -53,7 +59,7 @@ func GetUserFromDB(userSignUp *models.UserSignUp) (*models.User, error) {
 	return user, nil
 }
 
-func GetUserAuthorisationFromDB(email string) (*models.UserSignUp, error) {
+func (u *userDataBase) GetUserAuthorisationFromDB(email string) (*models.UserSignUp, error) {
 	userSignUp := models.NewUserSignUp()
 	err := DB.QueryRow("SELECT email, password FROM users WHERE email = $1", email).Scan(&userSignUp.Email, &userSignUp.Password)
 	if err != nil {
@@ -62,12 +68,14 @@ func GetUserAuthorisationFromDB(email string) (*models.UserSignUp, error) {
 	return userSignUp, nil
 }
 
-func AddUserToVerificationDB(user *models.User, verificationCode string) error {
+type VerificationDataBase struct{}
+
+func (v VerificationDataBase) AddUserToVerificationDB(user *models.User, verificationCode string) error {
 	_, err := DB.Exec("INSERT INTO user_verification (is_verified, verification_code, id, email, code_expire_time) VALUES ($1, $2, $3, $4, $5)", false, verificationCode, user.ID, user.Email, time.Now().Add(time.Hour))
 	return err
 }
 
-func GetUserVerification(email string) (*models.UserVerification, error) {
+func (v VerificationDataBase) GetUserVerification(email string) (*models.UserVerification, error) {
 	var userVerification models.UserVerification
 
 	err := DB.QueryRow("SELECT is_verified, verification_code, id, email, code_expire_time FROM user_verification WHERE email = $1", email).Scan(&userVerification.IsVerified, &userVerification.VerificationCode, &userVerification.ID, &userVerification.Email, &userVerification.CodeExpireTime)
@@ -79,13 +87,13 @@ func GetUserVerification(email string) (*models.UserVerification, error) {
 	return &userVerification, nil
 }
 
-func ChangeVerificationState(userVerification *models.UserVerification, verificationState bool) error {
+func (v VerificationDataBase) ChangeVerificationState(userVerification *models.UserVerification, verificationState bool) error {
 	_, err := DB.Exec("UPDATE user_verification SET is_verified = $1 WHERE ID = $2", verificationState, userVerification.ID)
 
 	return err
 }
 
-func AddVerificationCode(userVerification *models.UserVerification, verificationCode string) error {
+func (v VerificationDataBase) AddVerificationCode(userVerification *models.UserVerification, verificationCode string) error {
 	time := time.Now().Add(time.Hour)
 
 	_, err := DB.Exec("UPDATE user_verification SET verification_code = $1, code_expire_time = $2 WHERE ID = $3", verificationCode, time, userVerification.ID)

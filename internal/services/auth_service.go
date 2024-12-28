@@ -4,30 +4,40 @@ import (
 	"fmt"
 
 	models "main.go/internal/models"
-	repo "main.go/internal/repo"
+	"main.go/internal/repo"
 )
 
+type UserData struct {
+	repo repo.UserRepository
+}
+
+func NewUserData(repo repo.UserRepository) *UserData {
+	return &UserData{repo: repo}
+}
+
 func SignUp(userSignUp *models.UserSignUp) (*models.User, error) {
-	exist, err := repo.FindUserByEmail(userSignUp.Email)
+	userData := NewUserData(repo.NewUserDataBase())
+
+	exist, err := userData.repo.FindUserByEmail(userSignUp.Email)
 	if err != nil {
 		return nil, err
 	}
 	if exist {
 		return &models.User{}, fmt.Errorf("пользователь уже существует")
 	} else {
-		err = repo.AddUserToDB(userSignUp)
+		err = userData.repo.AddUserToDB(userSignUp)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	user, err := repo.GetUserFromDB(userSignUp)
+	user, err := userData.repo.GetUserFromDB(userSignUp)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = repo.AddUserToVerificationDB(user, GenerateVerificationCode(user.Email))
+	AddUserVerificationData(user)
 
 	if err != nil {
 		return nil, err
@@ -37,20 +47,22 @@ func SignUp(userSignUp *models.UserSignUp) (*models.User, error) {
 }
 
 func LogIn(userSignUp *models.UserSignUp) (*models.User, error) {
-	exist, err := repo.FindUserByEmail(userSignUp.Email)
+	userData := NewUserData(repo.NewUserDataBase())
+
+	exist, err := userData.repo.FindUserByEmail(userSignUp.Email)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if exist {
-		loginUser, err := repo.GetUserAuthorisationFromDB(userSignUp.Email)
+		loginUser, err := userData.repo.GetUserAuthorisationFromDB(userSignUp.Email)
 		if err != nil {
 			return nil, err
 		}
 		if loginUser.Email == userSignUp.Email && loginUser.Password == userSignUp.Password {
 			if VerificationStatus(userSignUp.Email) {
-				user, err := repo.GetUserFromDB(userSignUp)
+				user, err := userData.repo.GetUserFromDB(userSignUp)
 
 				if err != nil {
 					return nil, err

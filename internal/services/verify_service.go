@@ -10,13 +10,28 @@ import (
 	"github.com/go-gomail/gomail"
 	"main.go/internal"
 	models "main.go/internal/models"
-	repo "main.go/internal/repo"
+	"main.go/internal/repo"
 )
+
+type VerificationData struct {
+	repo repo.VerificationRepository
+}
+
+func NewVerificationData(repo repo.VerificationRepository) *VerificationData {
+	return &VerificationData{repo: repo}
+}
 
 // internal "main.go/internal"
 func VerificationStatus(email string) bool {
-	user, _ := repo.GetUserVerification(email)
+	verificationData := NewVerificationData(repo.VerificationDataBase{})
+
+	user, _ := verificationData.repo.GetUserVerification(email)
 	return user.IsVerified
+}
+
+func AddUserVerificationData(user *models.User) error {
+	err := repo.AddUserToVerificationDB(user, GenerateVerificationCode(user.Email))
+	return err
 }
 
 func Verify(userVerification *models.UserVerification) error {
